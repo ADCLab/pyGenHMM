@@ -1,6 +1,6 @@
 from numpy import array, zeros, empty
 from numpy import inf
-from numpy import log
+from numpy import log, exp
 from numpy import nonzero
 from random import shuffle
 import warnings
@@ -22,7 +22,7 @@ def mini_batch_generator(AllYs, batch_size):
         yield AllYs[i:i + batch_size]
 
 
-def train_batch(self,allYs,iterations=20,method='log',numCores=6,FracOrNum=None,printHMM=[],optimizeHMM=['A','pi0','emission']):
+def train_batch(self,allYs,iterations=20,method='log',numCores=6,FracOrNum=None,printHMM=[],optimizeHMM=['A','pi0','emission'],batch_size=200):
     fitness=[]
     with Pool(numCores) as pool:            
         for iter in range(iterations):
@@ -36,7 +36,7 @@ def train_batch(self,allYs,iterations=20,method='log',numCores=6,FracOrNum=None,
             
             shuffle(allYs)
             # Ys=allYs[0:Number]        
-            for Ys in mini_batch_generator(allYs, 200):
+            for Ys in mini_batch_generator(allYs, batch_size):
     
                 # log_alpha_all = pool.starmap(calc_logalpha,zip(repeat(self.log_T),repeat(self.log_pi0),log_probObsState_all))
                 # log_probObsState_pool = log_probObsState_all[0:Number]
@@ -67,9 +67,13 @@ def train_batch(self,allYs,iterations=20,method='log',numCores=6,FracOrNum=None,
             # Issue is related to numerical calculations
     
             if 'pi0' in optimizeHMM:  
-                pi0_topPart=array([gamma[:,0] for gamma in gamma_pool]).sum(axis=0)
-                pi0=pi0_topPart/pi0_topPart.sum()
-                self.setPi0(pi0)
+                # pi0_topPart=array([gamma[:,0] for gamma in gamma_pool]).sum(axis=0)
+                # pi0=pi0_topPart/pi0_topPart.sum()
+                # self.setPi0(pi0)              
+                grad_Pi0= array([gamma[:,0] for gamma in gamma_pool]).sum(axis=0) / (batch_size*self.pi0)
+            
+                
+            
             
             # Estimate transition matrix A
             if 'A' in optimizeHMM:             
@@ -82,7 +86,7 @@ def train_batch(self,allYs,iterations=20,method='log',numCores=6,FracOrNum=None,
             # with Pool(numCores) as pool:    
             #     log_probObsState_all = pool.map(self.calcProbObsState,allYs)         
             #     log_alpha_pool = pool.starmap(calc_logalpha,zip(repeat(self.log_T),repeat(self.log_pi0),log_probObsState_all))
-            logProb=sum([log_alpha[:,-1].sum() for log_alpha in log_alpha_pool])
+            logProb=sum(  log([exp(log_alpha[:,-1]).sum() for log_alpha in log_alpha_pool])  )
             fitness.append(logProb)
     
         
@@ -155,7 +159,9 @@ def train_pool(self,allYs,iterations=20,method='log',numCores=6,FracOrNum=None,p
             # with Pool(numCores) as pool:    
             #     log_probObsState_all = pool.map(self.calcProbObsState,allYs)         
             #     log_alpha_pool = pool.starmap(calc_logalpha,zip(repeat(self.log_T),repeat(self.log_pi0),log_probObsState_all))
-            logProb=sum([log_alpha[:,-1].sum() for log_alpha in log_alpha_pool])
+            logProb=sum(  log([exp(log_alpha[:,-1]).sum() for log_alpha in log_alpha_pool])  )
+            # fitness.append(logProb)
+            # logProb=sum([log_alpha[:,-1].sum() for log_alpha in log_alpha_pool])
             fitness.append(logProb)
 
     
