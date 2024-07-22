@@ -3,7 +3,7 @@ from typing import Any, Optional
 from scipy.stats import expon, norm, lognorm
 from numpy.random import default_rng
 from numpy import log as ln
-from math import exp
+from math import exp, sqrt
 from numpy import einsum
 from numpy import matmul
 #---------------------------------------------------------------------
@@ -36,8 +36,7 @@ class exponential(ExponentialModel):
         lamb = sum([sum(gammas[cObs]) for cObs in range(numObs)]) / sum([matmul(gammas[cObs],obs[cObs]) for cObs in range(numObs)])
         if update:
             self.update(lamb)
-        return lamb
-            
+                    
     def update(self,lamb):
         self.lamb = lamb
         self.mu = 1/lamb
@@ -68,6 +67,18 @@ class gaussian(GaussianModel):
 
     def logProbObs(self,x):
         return ln(self.rv.pdf(x)).tolist()
+    
+    def estimate(self,gammas,obs,update):
+        numObs=len(obs)
+        mu = sum([matmul(gammas[cObs],obs[cObs]) for cObs in range(numObs)]) / sum([sum(gammas[cObs]) for cObs in range(numObs)])
+        std = sqrt(  sum([matmul(gammas[cObs],[(ob-mu)**2 for ob in obs[cObs]]) for cObs in range(numObs)]) / sum([sum(gammas[cObs]) for cObs in range(numObs)])  )
+        if update:
+            self.update(mu,std)
+            
+    def update(self,mu,std):
+        self.mu = mu
+        self.std = std
+        self.rv = norm(loc=self.mu, scale=self.std)
 #---------------------------------------------------------------------
 #---------------------------------------------------------------------    
 #---------------------------------------------------------------------
