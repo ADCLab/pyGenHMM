@@ -36,6 +36,9 @@ class poisson(PoissonModel):
             self.update(lamb)
         return lamb
             
+    def grad(self,gammas,obs):
+        return (1/self.mu)*sum([matmul(cGamma,[cOb-1 for cOb in cObs]) for cGamma,cObs in zip(gammas,obs)])  
+    
     def update(self,mu):
         self.mu = mu
         self.lamb = 1/mu
